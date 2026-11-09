@@ -179,11 +179,19 @@ app.get("/api/stream", async (req, res) => {
   }
 
   const playlistPath = path.join(OUTPUT_DIR, region, "stream.m3u8");
-  
+
+  // Kiểm tra xem file m3u8 thực tế đã tồn tại trên ổ đĩa của server chưa
+  if (!fs.existsSync(playlistPath)) {
+    return res.status(504).json({ 
+      success: false, 
+      error: `Luồng cho khu vực ${region} đang được khởi tạo, vui lòng thử lại sau vài giây.` 
+    });
+  }
+
   res.json({
-  success: true,
-  playlist: `https://h-th-ng-ssai-demo-media.onrender.com/live/${region}/stream.m3u8`
-});
+    success: true,
+    playlist: `https://h-th-ng-ssai-demo-media.onrender.com/live/${region}/stream.m3u8`
+  });
 });
 
 app.listen(PORT, async () => {
