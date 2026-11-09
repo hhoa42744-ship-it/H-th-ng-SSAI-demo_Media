@@ -193,10 +193,27 @@
       const adStartTime = currentAd.start;
       const adEndTime = currentAd.start + currentAd.duration;
 
+      // Hủy instance HLS cũ nếu đang chạy để chuyển vùng mượt mà
+      if (hls) {
+        hls.destroy();
+        hls = null;
+      }
+
       try {
         const response = await fetch(`https://h-th-ng-ssai-demo-media.onrender.com/api/stream?region=${region}`);
         const data = await response.json();
-        if (!data.success) return;
+        
+        // Nếu server chưa render xong file playlist, hiển thị trạng thái chờ và tự động gọi lại sau 3 giây
+        if (!data.success) {
+          console.warn(data.error || "Server đang khởi tạo luồng, đang thử lại...");
+          const stitchVal = document.getElementById("stitchVal");
+          if (stitchVal) {
+            stitchVal.innerText = "Đang khởi tạo...";
+            stitchVal.style.color = "#fbbf24";
+          }
+          setTimeout(loadStream, 3000);
+          return;
+        }
         
         const video = document.getElementById("video");
         const url = data.playlist;
@@ -206,6 +223,8 @@
           const adOverlay = document.getElementById("adOverlay");
           const countdownEl = document.getElementById("countdown");
           const stitchVal = document.getElementById("stitchVal");
+
+          if (!stitchVal) return;
 
           if (currentTime >= adStartTime && currentTime < adEndTime) {
             const remaining = Math.ceil(adEndTime - currentTime);
@@ -220,13 +239,13 @@
           }
         });
 
-        // Bổ sung giám sát kẹt khung hình (stalling recovery) khi phát gần hết
+        // Giám sát kẹt khung hình (stalling recovery)
         video.addEventListener('waiting', () => {
           console.log("Video đang tải phân đoạn, tự động đồng bộ lại buffer...");
           if (video.paused === false) {
             setTimeout(() => {
               if (video.paused === false && video.readyState < 3) {
-                video.currentTime += 0.1; // Nhích nhẹ thời gian để kích hoạt lại bộ đệm
+                video.currentTime += 0.1;
               }
             }, 1500);
           }
@@ -270,9 +289,12 @@
           });
         } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
           video.src = url;
+          video.play().catch(() => {});
         }
       } catch (error) {
         console.error("Lỗi tải luồng:", error);
+        // Thử lại nếu gặp lỗi kết nối mạng
+        setTimeout(loadStream, 4000);
       }
     }
     loadStream();
