@@ -181,10 +181,9 @@ app.get("/api/stream", async (req, res) => {
   const playlistPath = path.join(OUTPUT_DIR, region, "stream.m3u8");
   
   res.json({
-    success: true,
-    region: region,
-    playlist: `/output/${region}/stream.m3u8`
-  });
+  success: true,
+  playlist: `https://h-th-ng-ssai-demo-media.onrender.com/live/${region}/stream.m3u8`
+});
 });
 
 app.listen(PORT, async () => {
