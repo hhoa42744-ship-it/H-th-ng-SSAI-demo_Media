@@ -220,16 +220,39 @@
           }
         });
 
-        // Cấu hình Low-Latency Hls.js đã tối ưu giảm độ trễ (Buffer nhỏ hơn)
+        // Tối ưu hóa tuyệt đối bộ đệm HLS để chống giật lag và tự phục hồi khi mạng chậm
         if (Hls.isSupported()) {
           hls = new Hls({
             lowLatencyMode: true,
-            maxBufferLength: 4,
-            maxMaxBufferLength: 8,
-            liveSyncDurationCount: 1
+            maxBufferLength: 30,          // Tăng buffer lên 30 giây để lưu trữ sẵn các đoạn tiếp theo
+            maxMaxBufferLength: 60,
+            liveSyncDurationCount: 3,
+            fragLoadingTimeOut: 20000,     // Timeout tải fragment rộng hơn để chống rớt mạng đột ngột
+            manifestLoadingTimeOut: 20000
           });
+          
           hls.loadSource(url);
           hls.attachMedia(video);
+          
+          // Tự động khôi phục nếu gặp lỗi phân đoạn mạng
+          hls.on(Hls.Events.ERROR, function (event, data) {
+            if (data.fatal) {
+              switch (data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                  console.log("Lỗi mạng, đang thử kết nối lại...");
+                  hls.startLoad();
+                  break;
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                  console.log("Lỗi media, đang khôi phục...");
+                  hls.recoverMediaError();
+                  break;
+                default:
+                  hls.destroy();
+                  break;
+              }
+            }
+          });
+
           hls.on(Hls.Events.MANIFEST_PARSED, function () {
             video.play().catch(() => {});
           });
