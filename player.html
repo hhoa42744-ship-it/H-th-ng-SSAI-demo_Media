@@ -220,12 +220,12 @@
           }
         });
 
-        // Cấu hình Low-Latency Hls.js giúp phát ngay lập tức không bị trễ/buffer lâu
+        // Cấu hình Low-Latency Hls.js đã tối ưu giảm độ trễ (Buffer nhỏ hơn)
         if (Hls.isSupported()) {
           hls = new Hls({
             lowLatencyMode: true,
-            maxBufferLength: 10,
-            maxMaxBufferLength: 20,
+            maxBufferLength: 4,
+            maxMaxBufferLength: 8,
             liveSyncDurationCount: 1
           });
           hls.loadSource(url);
@@ -235,7 +235,6 @@
           });
         } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
           video.src = url;
-          video.play().catch(() => {});
         }
       } catch (error) {
         console.error("Lỗi tải luồng:", error);
