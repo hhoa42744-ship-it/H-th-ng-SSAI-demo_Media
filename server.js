@@ -42,7 +42,8 @@ if (!fs.existsSync(OUTPUT_DIR)) {
 }
 
 app.use(express.static(__dirname));
-app.use("/output", express.static(OUTPUT_DIR));
+// Sửa lại đường dẫn static thành /live để khớp hoàn toàn với client và URL trả về
+app.use("/live", express.static(OUTPUT_DIR));
 
 function runFFmpeg(args) {
   return new Promise((resolve, reject) => {
@@ -83,7 +84,6 @@ function getDuration(file) {
 
 const videoFilter = `scale=${TARGET_WIDTH}:${TARGET_HEIGHT}:force_original_aspect_ratio=decrease,pad=${TARGET_WIDTH}:${TARGET_HEIGHT}:(ow-iw)/2:(oh-ih)/2,fps=${TARGET_FPS},format=yuv420p`;
 
-// Hàm xử lý dựng hình SSAI trước cho từng khu vực
 async function buildStreamForRegion(region) {
   const config = regionConfigs[region];
   const mainVideo = path.join(INPUT_DIR, "main_video.mp4");
@@ -97,7 +97,6 @@ async function buildStreamForRegion(region) {
   const workDir = path.join(OUTPUT_DIR, region);
   const playlist = path.join(workDir, "stream.m3u8");
 
-  // Nếu đã render sẵn rồi thì bỏ qua để khởi động siêu nhanh
   if (fs.existsSync(playlist)) {
     console.log(`[SSAI Cache] Luồng '${region}' đã sẵn sàng.`);
     return;
@@ -113,9 +112,6 @@ async function buildStreamForRegion(region) {
   const concatFile = path.join(workDir, "concat.txt");
 
   try {
-    const mainDuration = await getDuration(mainVideo);
-
-    // 1. Cắt Main Phần 1 (Dùng preset ultrafast để render nhanh gấp nhiều lần)
     await runFFmpeg([
       "-y", "-i", mainVideo, "-t", String(config.adStart),
       "-vf", videoFilter, "-c:v", "libx264", "-preset", "ultrafast", "-b:v", VIDEO_BITRATE,
@@ -124,7 +120,6 @@ async function buildStreamForRegion(region) {
       "-movflags", "+faststart", mainPart1
     ]);
 
-    // 2. Cắt Main Phần 2
     await runFFmpeg([
       "-y", "-ss", String(config.adStart), "-i", mainVideo,
       "-vf", videoFilter, "-c:v", "libx264", "-preset", "ultrafast", "-b:v", VIDEO_BITRATE,
@@ -133,7 +128,6 @@ async function buildStreamForRegion(region) {
       "-movflags", "+faststart", mainPart2
     ]);
 
-    // 3. Chuẩn hóa Quảng cáo
     await runFFmpeg([
       "-y", "-i", adVideo,
       "-vf", videoFilter, "-c:v", "libx264", "-preset", "ultrafast", "-b:v", VIDEO_BITRATE,
@@ -142,7 +136,6 @@ async function buildStreamForRegion(region) {
       "-movflags", "+faststart", adPart
     ]);
 
-    // 4. Tạo file concat (concatenate)
     fs.writeFileSync(
       concatFile,
       `file '${mainPart1.replace(/\\/g, "/")}'\n` +
@@ -150,13 +143,11 @@ async function buildStreamForRegion(region) {
       `file '${mainPart2.replace(/\\/g, "/")}'\n`
     );
 
-    // 5. Ghép nối
     await runFFmpeg([
       "-y", "-f", "concat", "-safe", "0", "-i", concatFile,
       "-c", "copy", "-movflags", "+faststart", joined
     ]);
 
-    // 6. Đóng gói HLS (chia nhỏ segment 2 giây để siêu mượt, giảm thiểu độ trễ)
     await runFFmpeg([
       "-y", "-i", joined, "-c", "copy", "-start_number", "0",
       "-hls_time", "2", "-hls_list_size", "0",
@@ -170,7 +161,6 @@ async function buildStreamForRegion(region) {
   }
 }
 
-// API endpoint trả về ngay lập tức vì video đã được render sẵn
 app.get("/api/stream", async (req, res) => {
   const region = String(req.query.region || "").toLowerCase();
   
@@ -180,7 +170,6 @@ app.get("/api/stream", async (req, res) => {
 
   const playlistPath = path.join(OUTPUT_DIR, region, "stream.m3u8");
 
-  // Kiểm tra xem file m3u8 thực tế đã tồn tại trên ổ đĩa của server chưa
   if (!fs.existsSync(playlistPath)) {
     return res.status(504).json({ 
       success: false, 
@@ -195,16 +184,10 @@ app.get("/api/stream", async (req, res) => {
 });
 
 app.listen(PORT, async () => {
-  console.log(` SSAI HLS Server đang chạy tại cổng ${PORT}`);
+  console.log(`🚀 SSAI HLS Server đang chạy tại cổng ${PORT}`);
   
-  // Render sẵn tất cả các vùng ngay khi khởi động để tối ưu tốc độ
+  // Render sẵn tất cả các vùng ngay khi khởi động
   await buildStreamForRegion("hanoi");
   await buildStreamForRegion("danang");
-  console.log(` Tất cả luồng SSAI đã sẵn sàng phát tức thì!`);
-
-  if (process.platform === "win32" || process.platform === "darwin") {
-    const url = `http://localhost:${PORT}`;
-    const startCommand = process.platform === "win32" ? `start ${url}` : `open ${url}`;
-    exec(startCommand);
-  }
+  console.log(`✨ Tất cả luồng SSAI đã sẵn sàng phát tức thì!`);
 });
