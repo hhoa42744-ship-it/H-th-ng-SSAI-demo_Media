@@ -220,26 +220,38 @@
           }
         });
 
-        // Tối ưu hóa tuyệt đối bộ đệm HLS để chống giật lag và tự phục hồi khi mạng chậm
+        // Bổ sung giám sát kẹt khung hình (stalling recovery) khi phát gần hết
+        video.addEventListener('waiting', () => {
+          console.log("Video đang tải phân đoạn, tự động đồng bộ lại buffer...");
+          if (video.paused === false) {
+            setTimeout(() => {
+              if (video.paused === false && video.readyState < 3) {
+                video.currentTime += 0.1; // Nhích nhẹ thời gian để kích hoạt lại bộ đệm
+              }
+            }, 1500);
+          }
+        });
+
         if (Hls.isSupported()) {
           hls = new Hls({
             lowLatencyMode: true,
-            maxBufferLength: 30,          // Tăng buffer lên 30 giây để lưu trữ sẵn các đoạn tiếp theo
-            maxMaxBufferLength: 60,
+            maxBufferLength: 45,
+            maxMaxBufferLength: 90,
             liveSyncDurationCount: 3,
-            fragLoadingTimeOut: 20000,     // Timeout tải fragment rộng hơn để chống rớt mạng đột ngột
-            manifestLoadingTimeOut: 20000
+            fragLoadingTimeOut: 30000,
+            manifestLoadingTimeOut: 30000,
+            fragLoadingMaxRetry: 5,
+            fragLoadingRetryDelay: 1000
           });
           
           hls.loadSource(url);
           hls.attachMedia(video);
           
-          // Tự động khôi phục nếu gặp lỗi phân đoạn mạng
           hls.on(Hls.Events.ERROR, function (event, data) {
             if (data.fatal) {
               switch (data.type) {
                 case Hls.ErrorTypes.NETWORK_ERROR:
-                  console.log("Lỗi mạng, đang thử kết nối lại...");
+                  console.log("Lỗi mạng, đang khôi phục luồng HLS...");
                   hls.startLoad();
                   break;
                 case Hls.ErrorTypes.MEDIA_ERROR:
