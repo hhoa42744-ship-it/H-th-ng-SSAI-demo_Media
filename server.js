@@ -184,10 +184,10 @@ app.get("/api/stream", async (req, res) => {
 });
 
 app.listen(PORT, async () => {
-  console.log(`🚀 SSAI HLS Server đang chạy tại cổng ${PORT}`);
+  console.log(` SSAI HLS Server đang chạy tại cổng ${PORT}`);
   
   // Render sẵn tất cả các vùng ngay khi khởi động
   await buildStreamForRegion("hanoi");
   await buildStreamForRegion("danang");
-  console.log(`✨ Tất cả luồng SSAI đã sẵn sàng phát tức thì!`);
+  console.log(` Tất cả luồng SSAI đã sẵn sàng phát tức thì!`);
 });
