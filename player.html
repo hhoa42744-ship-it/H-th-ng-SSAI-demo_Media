@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enterprise SSAI - Low Latency Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #0b0f19;
+      color: white;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      width: min(560px, 92%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .header-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .region-badge {
+      background: #2563eb;
+      color: white;
+      padding: 6px 20px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+    .switch-btn {
+      background: #1f2937;
+      color: #93c5fd;
+      border: 1px solid #374151;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .switch-btn:hover {
+      background: #374151;
+      color: white;
+    }
+
+    .player-box {
+      background: black;
+      border-radius: 12px;
+      overflow: hidden;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      max-height: 52vh;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+    }
+    video { 
+      width: 100%; 
+      height: 100%; 
+      display: block; 
+      object-fit: contain; 
+    }
+
+    .ad-overlay {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(220, 38, 38, 0.9);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      display: none;
+      letter-spacing: 0.5px;
+      z-index: 10;
+    }
+
+    .info-toggle-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .stats-panel {
+      position: absolute;
+      top: 50px;
+      right: 12px;
+      background: rgba(17, 24, 39, 0.95);
+      border: 1px solid #374151;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 11px;
+      color: #d1d5db;
+      display: none;
+      z-index: 10;
+      width: 210px;
+    }
+    .stats-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .stats-key { color: #9ca3af; }
+    .stats-val { color: #34d399; font-family: monospace; }
+
+    .back { 
+      display: inline-block; 
+      margin-top: 12px; 
+      color: #60a5fa; 
+      text-decoration: none; 
+      font-size: 12px;
+    }
+    .back:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-bar">
+      <div id="regionBadge" class="region-badge">Đang tải...</div>
+      <a id="switchRegionBtn" class="switch-btn" href="#">Đổi khu vực khác ⇄</a>
+    </div>
+
+    <div class="player-box">
+      <div id="adOverlay" class="ad-overlay">QUẢNG CÁO (<span id="countdown">26</span>s)</div>
+      
+      <button class="info-toggle-btn" onclick="toggleStats()" title="Thông số kỹ thuật">i</button>
+
+      <div id="statsPanel" class="stats-panel">
+        <div class="stats-row"><span class="stats-key">Streaming:</span><span class="stats-val">Low-Latency HLS</span></div>
+        <div class="stats-row"><span class="stats-key">Resolution:</span><span class="stats-val" id="resVal">1280x720</span></div>
+        <div class="stats-row"><span class="stats-key">Stitch Status:</span><span class="stats-val" id="stitchVal">Synced</span></div>
+      </div>
+
+      <video id="video" controls autoplay playsinline></video>
+    </div>
+
+    <a class="back" href="/">← Quay lại trang chủ</a>
+  </div>
+
+  <script>
+    let hls = null;
+    
+    const adConfig = {
+      hanoi: { start: 20, duration: 34 },
+      danang: { start: 20, duration: 26 }
+    };
+
+    function toggleStats() {
+      const panel = document.getElementById("statsPanel");
+      panel.style.display = (panel.style.display === "block" ? "none" : "block");
+    }
+
+    async function loadStream() {
+      const params = new URLSearchParams(window.location.search);
+      const region = params.get("region") || "hanoi";
+      
+      const isHanoi = (region === "hanoi");
+      document.getElementById("regionBadge").innerText = isHanoi ? "Hà Nội" : "Đà Nẵng";
+      
+      const otherRegion = isHanoi ? "danang" : "hanoi";
+      document.getElementById("switchRegionBtn").href = `?region=${otherRegion}`;
+
+      const currentAd = adConfig[region] || adConfig.hanoi;
+      const adStartTime = currentAd.start;
+      const adEndTime = currentAd.start + currentAd.duration;
+
+      try {
+        const response = await fetch(`/api/stream?region=${region}`);
+        const data = await response.json();
+        if (!data.success) return;
+        
+        const video = document.getElementById("video");
+        const url = data.playlist;
+
+        video.addEventListener("timeupdate", () => {
+          const currentTime = video.currentTime;
+          const adOverlay = document.getElementById("adOverlay");
+          const countdownEl = document.getElementById("countdown");
+          const stitchVal = document.getElementById("stitchVal");
+
+          if (currentTime >= adStartTime && currentTime < adEndTime) {
+            const remaining = Math.ceil(adEndTime - currentTime);
+            countdownEl.innerText = remaining;
+            adOverlay.style.display = "block";
+            stitchVal.innerText = "Ad-Stitched";
+            stitchVal.style.color = "#f87171";
+          } else {
+            adOverlay.style.display = "none";
+            stitchVal.innerText = "Synced";
+            stitchVal.style.color = "#34d399";
+          }
+        });
+
+        // Cấu hình Low-Latency Hls.js giúp phát ngay lập tức không bị trễ/buffer lâu
+        if (Hls.isSupported()) {
+          hls = new Hls({
+            lowLatencyMode: true,
+            maxBufferLength: 10,
+            maxMaxBufferLength: 20,
+            liveSyncDurationCount: 1
+          });
+          hls.loadSource(url);
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED, function () {
+            video.play().catch(() => {});
+          });
+        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          video.src = url;
+          video.play().catch(() => {});
+        }
+      } catch (error) {
+        console.error("Lỗi tải luồng:", error);
+      }
+    }
+    loadStream();
+  </script>
+</body>
+</html>

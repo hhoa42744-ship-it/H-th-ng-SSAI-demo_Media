@@ -1,0 +1,582 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSAI HLS DEMO</title>
+
+<style>
+:root {
+  --green: #145c52;
+  --green-dark: #10483f;
+  --bg: #f8f7f2;
+  --text: #173d38;
+  --muted: #788a83;
+  --border: #e2e5dd;
+  --selected: #e5f0ea;
+  --gold: #e6b800;
+  --gold-dark: #8f5e00;
+  --gold-bg: #fff8df;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.container {
+  width: 100%;
+  max-width: 1440px;
+  height: calc(100vh - 20px);
+  padding: clamp(20px, 2.5vh, 34px) clamp(24px, 3vw, 44px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  box-shadow: 0 12px 40px rgba(30, 75, 61, .07);
+}
+
+/* HEADER */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.logo {
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: var(--green);
+  color: white;
+  font-size: 35px;
+  font-weight: 800;
+  box-shadow: 0 6px 16px rgba(20, 92, 82, .15);
+}
+
+.header h1 {
+  font-size: clamp(27px, 2.5vw, 38px);
+  line-height: 1.15;
+  letter-spacing: -.6px;
+}
+
+.header p {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: clamp(13px, 1.1vw, 16px);
+}
+
+/* KHU VỰC NGƯỜI DÙNG */
+.section-title {
+  margin-bottom: 16px;
+  font-size: clamp(19px, 1.8vw, 25px);
+  font-weight: 750;
+  text-align: center;
+}
+
+.regions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 380px));
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+}
+
+.region {
+  position: relative;
+  width: 100%;
+  height: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  border: 2px solid var(--border);
+  border-radius: 20px;
+  background: #fff;
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+  cursor: pointer;
+  transition: border-color .2s, background .2s,
+              box-shadow .2s, transform .2s;
+}
+
+.region:hover {
+  border-color: #9bbdb0;
+  background: #f8fbf8;
+  transform: translateY(-2px);
+}
+
+.region.active {
+  border: 3px solid var(--green);
+  background: var(--selected);
+  box-shadow: 0 6px 18px rgba(20, 92, 82, .12);
+}
+
+/* BIỂU TƯỢNG NGƯỜI DÙNG */
+.user-icon {
+  width: clamp(76px, 8vw, 104px);
+  height: clamp(76px, 8vw, 104px);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #444952;
+  color: #fff;
+  transition: background .2s;
+}
+
+.user-icon svg {
+  display: block;
+  width: 68%;
+  height: 68%;
+}
+
+.region.active .user-icon {
+  background: var(--green);
+}
+
+/* FONT CHỮ */
+.region-name {
+  text-align: center;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+
+.radio {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #c8d2ca;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.region.active .radio {
+  border: 5px solid var(--green);
+}
+
+/* KHUNG TRÌNH TỰ PHÁT */
+.midroll {
+  width: 100%;
+  max-width: 800px;
+  align-self: center;
+  padding: clamp(17px, 2.3vh, 27px);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: #fcfcf9;
+}
+
+.midroll-title {
+  margin-bottom: 15px;
+  font-size: clamp(21px, 2vw, 28px);
+  font-weight: 600;
+  text-align: left;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* THANH VIDEO */
+.timeline {
+  display: grid;
+  grid-template-columns: 1fr 1.12fr 1fr;
+  min-height: clamp(120px, 19vh, 165px);
+  overflow: hidden;
+  border: 2px solid var(--green);
+  border-radius: 18px;
+  background: var(--green);
+}
+
+.video-part, .ad-part {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 9px;
+  padding: 14px;
+}
+
+.video-part {
+  background: var(--green);
+  color: #fff;
+}
+
+.ad-part {
+  background: var(--gold-bg);
+  color: var(--gold-dark);
+  border-left: 3px solid var(--gold);
+  border-right: 3px solid var(--gold);
+}
+
+.video-name {
+  font-size: clamp(16px, 1.6vw, 22px);
+  font-weight: 600;
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.play-icon {
+  font-size: 25px;
+  line-height: 1;
+}
+
+.ad-label {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f2d36b;
+  color: #684600;
+  font-size: clamp(11px, 1vw, 14px);
+  font-weight: 800;
+  letter-spacing: .3px;
+}
+
+.ad-caption {
+  font-size: clamp(12px, 1vw, 14px);
+  color: #8b762f;
+  line-height: 1.3;
+}
+
+/* NÚT BẮT ĐẦU */
+.start-button {
+  width: 100%;
+  max-width: 780px;
+  align-self: center;
+  min-height: clamp(58px, 9vh, 76px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  border: none;
+  border-radius: 18px;
+  background: var(--green);
+  color: #fff;
+  font-family: inherit;
+  font-size: clamp(21px, 2vw, 29px);
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 7px 18px rgba(20, 92, 82, .14);
+  transition: .2s;
+}
+
+.start-button:hover {
+  background: var(--green-dark);
+  transform: translateY(-1px);
+}
+
+button:focus-visible {
+  outline: 3px solid rgba(20, 92, 82, .4);
+  outline-offset: 3px;
+}
+
+/* MÀN HÌNH THẤP */
+@media (min-width: 701px) and (max-height: 700px) {
+  .container {
+    padding-top: 14px;
+    padding-bottom: 14px;
+    gap: 10px;
+  }
+
+  .logo {
+    width: 50px;
+    height: 50px;
+    font-size: 27px;
+    border-radius: 14px;
+  }
+
+  .header {
+    gap: 12px;
+  }
+
+  .section-title {
+    margin-bottom: 8px;
+  }
+
+  .region {
+    height: 155px;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .user-icon {
+    width: 72px;
+    height: 72px;
+  }
+
+  .region-name {
+    font-size: 18px;
+  }
+
+  .midroll {
+    padding: 13px 18px;
+  }
+
+  .midroll-title {
+    margin-bottom: 9px;
+  }
+
+  .timeline {
+    min-height: 100px;
+  }
+
+  .video-part, .ad-part {
+    gap: 5px;
+    padding: 9px;
+  }
+
+  .play-icon {
+    font-size: 20px;
+  }
+
+  .start-button {
+    min-height: 48px;
+  }
+}
+
+/* ĐIỆN THOẠI */
+@media (max-width: 700px) {
+  html, body {
+    height: auto;
+    min-height: 100%;
+  }
+
+  body {
+    align-items: flex-start;
+    padding: 10px;
+  }
+
+  .container {
+    height: auto;
+    min-height: calc(100vh - 20px);
+    padding: 22px 16px;
+    gap: 24px;
+    border-radius: 20px;
+  }
+
+  .logo {
+    width: 55px;
+    height: 55px;
+    font-size: 29px;
+  }
+
+  .header {
+    gap: 12px;
+  }
+
+  .regions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .region {
+    width: 100%;
+    height: 155px;
+    min-width: 0;
+    min-height: 0;
+    gap: 9px;
+    padding: 10px;
+  }
+
+  .user-icon {
+    width: 68px;
+    height: 68px;
+  }
+
+  .region-name {
+    font-size: 16px;
+  }
+
+  .radio {
+    top: 7px;
+    right: 7px;
+    width: 16px;
+    height: 16px;
+  }
+
+  .midroll,
+  .start-button {
+    max-width: 100%;
+  }
+
+  .timeline {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .video-part, .ad-part {
+    min-height: 100px;
+  }
+
+  .ad-part {
+    border: 3px solid var(--gold);
+  }
+
+  .start-button {
+    min-height: 60px;
+  }
+}
+</style>
+</head>
+
+<body>
+<main class="container">
+
+  <header class="header">
+    <div class="logo">S</div>
+    <div>
+      <h1>SSAI HLS DEMO</h1>
+      <p>Demo chèn quảng cáo theo hồ sơ người dùng và phát liền mạch trên hls.js</p>
+    </div>
+  </header>
+
+  <section>
+    <h2 class="section-title">Hồ sơ người dùng theo khu vực</h2>
+
+    <div class="regions">
+
+      <!-- HÀ NỘI -->
+      <button type="button"
+        class="region active"
+        data-region="hanoi"
+        aria-pressed="true">
+
+        <span class="radio" aria-hidden="true"></span>
+
+        <span class="user-icon" aria-hidden="true">
+          <svg viewBox="0 0 100 100"
+               fill="white"
+               xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="29" r="21"/>
+            <path d="M12 83C16 61 31 47 50 47C69 47 84 61 88 83C89 89 84 94 77 94H23C16 94 11 89 12 83Z"/>
+          </svg>
+        </span>
+
+        <span class="region-name">HÀ NỘI</span>
+      </button>
+
+      <!-- ĐÀ NẴNG -->
+      <button type="button"
+        class="region"
+        data-region="danang"
+        aria-pressed="false">
+
+        <span class="radio" aria-hidden="true"></span>
+
+        <span class="user-icon" aria-hidden="true">
+          <svg viewBox="0 0 100 100"
+               fill="white"
+               xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="29" r="21"/>
+            <path d="M12 83C16 61 31 47 50 47C69 47 84 61 88 83C89 89 84 94 77 94H23C16 94 11 89 12 83Z"/>
+          </svg>
+        </span>
+
+        <span class="region-name">ĐÀ NẴNG</span>
+      </button>
+
+    </div>
+  </section>
+
+  <section class="midroll">
+    <h2 class="midroll-title">TRÌNH TỰ PHÁT</h2>
+
+    <div class="timeline">
+      <div class="video-part">
+        <span class="play-icon" aria-hidden="true">▶</span>
+        <span class="video-name">VIDEO CHÍNH</span>
+      </div>
+
+      <div class="ad-part">
+        <span class="ad-label">MID-ROLL</span>
+        <span class="video-name" id="adName">
+          QUẢNG CÁO BẢO HIỂM XANH PHÚ QUÝ
+        </span>
+        <span class="ad-caption"></span>
+      </div>
+
+      <div class="video-part">
+        <span class="play-icon" aria-hidden="true">▶</span>
+        <span class="video-name">VIDEO TIẾP TỤC</span>
+      </div>
+    </div>
+  </section>
+
+  <button type="button" class="start-button" id="startButton">
+    <span class="play-icon" aria-hidden="true"></span>
+    <span>START</span>
+  </button>
+
+</main>
+
+<script>
+const ads = {
+  hanoi: "QUẢNG CÁO BẢO HIỂM XANH PHÚ QUÝ",
+  danang: "QUẢNG CÁO DU LỊCH BẮC NINH"
+};
+
+let selectedRegion = "hanoi";
+
+const regionButtons = document.querySelectorAll(".region");
+const adName = document.getElementById("adName");
+const startButton = document.getElementById("startButton");
+
+// Chọn khu vực và đổi quảng cáo
+regionButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    selectedRegion = button.dataset.region;
+
+    regionButtons.forEach((item) => {
+      const active = item === button;
+      item.classList.toggle("active", active);
+      item.setAttribute("aria-pressed", String(active));
+    });
+
+    adName.textContent = ads[selectedRegion];
+  });
+});
+
+// Chuyển sang trang phát video
+startButton.addEventListener("click", () => {
+  const params = new URLSearchParams({
+    region: selectedRegion,
+    placement: "mid-roll",
+    adName: ads[selectedRegion],
+    adTime: "20"
+  });
+
+  window.location.href = "player.html?" + params.toString();
+});
+</script>
+</body>
+</html>
