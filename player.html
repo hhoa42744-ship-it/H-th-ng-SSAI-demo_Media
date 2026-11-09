@@ -194,7 +194,7 @@
       const adEndTime = currentAd.start + currentAd.duration;
 
       try {
-        const response = await fetch(`/api/stream?region=${region}`);
+        const response = await fetch(`https://h-th-ng-ssai-demo-media.onrender.com/api/stream?region=${region}`);
         const data = await response.json();
         if (!data.success) return;
         
